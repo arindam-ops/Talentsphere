@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+
+{% block title %}ATS Applicant Pipeline | {{ company.name }} | TalentSphere{% endblock %}
+
+{% block extra_head %}
+<style>
+    .circular-chart-sm {
+        display: inline-block;
+        max-width: 90px;
+        max-height: 90px;
+    }
+    .circle-bg { fill: none; stroke: #e2e8f0; stroke-width: 3.8; }
+    .circle { fill: none; stroke-width: 3.8; stroke-linecap: round; }
+    .percentage-sm {
+        fill: #0f172a;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.6em;
+        text-anchor: middle;
+        font-weight: 700;
+    }
+    .score-high { stroke: #10b981; }
+    .score-med { stroke: #f59e0b; }
+    .score-low { stroke: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4 pb-3 border-bottom">
+        <div>
+            <span class="badge-tenant mb-1 d-inline-block">{{ company.name }} Tenant</span>
+            <h2 class="fw-bold mb-0">
+                <i class="bi bi-kanban text-primary me-2"></i>ATS Applicant Tracking Pipeline
+            </h2>
+            <p class="text-muted small mb-0">Candidates are automatically scored and ranked by ATS match percentage against job requirements.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'jobs:employer_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+            </a>
+            <a href="{% url 'jobs:job_create' %}" class="btn btn-primary btn-sm fw-semibold">
+                <i class="bi bi-plus-lg me-1"></i> Post Job
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card p-3 mb-4 bg-light border-0">
+        <form method="GET" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold text-muted mb-1">Filter by Job Posting</label>
+                <select name="job" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">All Jobs ({{ jobs.count }})</option>
+                    {% for j in jobs %}
+                    <option value="{{ j.pk }}" {% if selected_job_id == j.pk|stringformat:"i" %}selected{% endif %}>
+                        {{ j.title }} ({{ j.applicant_count }} candidates)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold text-muted mb-1">Filter by Hiring Stage</label>
+                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">All Stages</option>
+                    {% for code, label in status_choices %}
+                    <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <a href="{% url 'jobs:employer_applicants' %}" class="btn btn-sm btn-outline-secondary w-100">
+                    Reset Filters
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Applicants ATS Ranked Table -->
+    {% if applicants %}
+    <div class="card">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <span class="fw-bold"><i class="bi bi-sort-numeric-down text-primary me-1"></i>Ranked Applicants ({{ applicants.count }})</span>
+                <span class="badge bg-success-subtle text-success border border-success-subtle ms-2">Sorted by Highest ATS Score</span>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase">
+                    <tr>
+                        <th>Rank & Candidate</th>
+                        <th>Applied Position</th>
+                        <th>ATS Match Score</th>
+                        <th>Skills Breakdown</th>
+                        <th>Current Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applicants %}
+                    <tr>
+                        <!-- Rank & Candidate Info -->
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge rounded-pill bg-dark" style="min-width: 24px;">#{{ forloop.counter }}</span>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ app.full_name }}</div>
+                                    <div class="small text-muted">{{ app.email }} &bull; {{ app.phone }}</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Applied Job -->
+                        <td>
+                            <a href="{% url 'jobs:job_detail' app.job.pk %}" class="fw-semibold text-dark text-decoration-none small">
+                                {{ app.job.title }}
+                            </a>
+                            <div class="text-muted" style="font-size: 0.75rem;">Applied {{ app.applied_at|timesince }} ago</div>
+                        </td>
+
+                        <!-- ATS Match Score -->
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge {{ app.score_badge_class }} fs-6">
+                                    {{ app.ats_score }}%
+                                </span>
+                                <div class="progress flex-grow-1 d-none d-md-block" style="height: 6px; min-width: 60px;">
+                                    <div class="progress-bar {% if app.ats_score >= 75 %}bg-success{% elif app.ats_score >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                                         style="width: {{ app.ats_score }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Matched / Missing Skills preview -->
+                        <td>
+                            <div class="small">
+                                {% if app.matched_skills_list %}
+                                <div class="text-success mb-1">
+                                    <i class="bi bi-check-circle-fill me-1"></i>
+                                    {% for sk in app.matched_skills_list|slice:":3" %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle py-0">{{ sk }}</span>
+                                    {% endfor %}
+                                    {% if app.matched_skills_list|length > 3 %}
+                                    <span class="badge bg-light text-muted border">+{{ app.matched_skills_list|length|add:"-3" }}</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                {% if app.missing_skills_list %}
+                                <div class="text-danger" style="font-size: 0.75rem;">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Missing: {{ app.missing_skills_list|slice:":2"|join:", " }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td>
+                            {% if app.status == 'APPLIED' %}
+                            <span class="badge bg-secondary">Applied</span>
+                            {% elif app.status == 'REVIEWING' %}
+                            <span class="badge bg-info text-dark">Under Review</span>
+                            {% elif app.status == 'SHORTLISTED' %}
+                            <span class="badge bg-primary">Shortlisted</span>
+                            {% elif app.status == 'INTERVIEW' %}
+                            <span class="badge bg-warning text-dark">Interview</span>
+                            {% elif app.status == 'OFFERED' %}
+                            <span class="badge bg-success">Job Offered</span>
+                            {% elif app.status == 'REJECTED' %}
+                            <span class="badge bg-danger">Not Selected</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Action Buttons & Modals -->
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <!-- View ATS Details Modal Trigger -->
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#atsModal{{ app.pk }}">
+                                    <i class="bi bi-file-earmark-medical me-1"></i> ATS Report
+                                </button>
+                                <!-- Update Status Modal Trigger -->
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#statusModal{{ app.pk }}">
+                                    Update Stage
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- ATS Report Modal -->
+                    <div class="modal fade" id="atsModal{{ app.pk }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header bg-light">
+                                    <h5 class="modal-title fw-bold">
+                                        <i class="bi bi-cpu-fill text-primary me-2"></i>ATS Evaluation Report: {{ app.full_name }}
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body p-4">
+                                    <!-- Score Header with Circular Chart -->
+                                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center p-3 rounded-3 mb-4 bg-light border gap-3">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <svg viewBox="0 0 36 36" class="circular-chart-sm">
+                                                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                                <path class="circle {% if app.ats_score >= 75 %}score-high{% elif app.ats_score >= 50 %}score-med{% else %}score-low{% endif %}"
+                                                      stroke-dasharray="{{ app.ats_score }}, 100"
+                                                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                                <text x="18" y="20.35" class="percentage-sm">{{ app.ats_score }}%</text>
+                                            </svg>
+                                            <div>
+                                                <div class="text-muted small">Applicant Match Score</div>
+                                                <div class="h3 fw-bold mb-0 {% if app.ats_score >= 75 %}text-success{% elif app.ats_score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                                    {{ app.ats_score }}% Match
+                                                </div>
+                                                <span class="badge {% if app.ats_score >= 75 %}bg-success{% elif app.ats_score >= 50 %}bg-warning text-dark{% else %}bg-danger{% endif %} py-0">
+                                                    {% if app.ats_score >= 75 %}High Match{% elif app.ats_score >= 50 %}Moderate Match{% else %}Low Match{% endif %}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            {% if app.resume_file %}
+                                            <a href="{{ app.resume_file.url }}" target="_blank" class="btn btn-outline-primary fw-semibold">
+                                                <i class="bi bi-file-earmark-pdf me-1"></i> Download Resume
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Matched Skills -->
+                                    <div class="mb-3">
+                                        <h6 class="fw-bold text-success"><i class="bi bi-check-circle me-1"></i>Skills Found in Candidate Resume:</h6>
+                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                            {% for sk in app.matched_skills_list %}
+                                            <span class="badge bg-success px-3 py-2 fs-6">{{ sk }}</span>
+                                            {% empty %}
+                                            <span class="text-muted small">No direct required skills detected in resume.</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Missing Skills -->
+                                    <div class="mb-3">
+                                        <h6 class="fw-bold text-danger"><i class="bi bi-x-circle me-1"></i>Job Skills Not Found in Resume:</h6>
+                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                            {% for sk in app.missing_skills_list %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 fs-6">{{ sk }}</span>
+                                            {% empty %}
+                                            <span class="text-success small">100% of required skills present!</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Automated Feedback & Recommendations -->
+                                    {% if app.ats_feedback %}
+                                    <div class="alert alert-info small mt-3">
+                                        <strong class="d-block mb-1"><i class="bi bi-robot me-1"></i>Automated ATS Recommendation:</strong>
+                                        {{ app.ats_feedback }}
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Cover Letter Note -->
+                                    {% if app.cover_letter %}
+                                    <div class="mt-3">
+                                        <h6 class="fw-bold text-secondary">Candidate Cover Note:</h6>
+                                        <p class="small text-muted p-2 bg-light rounded border">{{ app.cover_letter }}</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Update Modal -->
+                    <div class="modal fade" id="statusModal{{ app.pk }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <form method="POST" action="{% url 'jobs:update_applicant_status' app.pk %}">
+                                    {% csrf_token %}
+                                    <div class="modal-header">
+                                        <h5 class="modal-title fw-bold">Update Pipeline Stage: {{ app.full_name }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Move to Stage</label>
+                                            <select name="status" class="form-select">
+                                                {% for code, label in status_choices %}
+                                                <option value="{{ code }}" {% if app.status == code %}selected{% endif %}>{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Internal Recruiter Notes</label>
+                                            <textarea name="recruiter_notes" class="form-control" rows="3" placeholder="e.g. Cleared technical interview round 1, recommend for final offer.">{{ app.recruiter_notes }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-primary btn-sm fw-semibold">Save Status</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card p-5 text-center">
+        <i class="bi bi-people-slash fs-1 text-muted mb-3"></i>
+        <h4 class="fw-bold">No candidate applications found</h4>
+        <p class="text-muted">There are no candidates matching your current job or stage filters.</p>
+        <a href="{% url 'jobs:employer_applicants' %}" class="btn btn-outline-primary mx-auto">Reset Filters</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

@@ -1,0 +1,400 @@
+{% extends 'base.html' %}
+
+{% block title %}⚡ Instant ATS Resume Scanner & Match Analyzer | TalentSphere{% endblock %}
+
+{% block extra_head %}
+<style>
+    .circular-chart {
+        display: block;
+        margin: 10px auto;
+        max-width: 160px;
+        max-height: 160px;
+    }
+    .circle-bg {
+        fill: none;
+        stroke: #e2e8f0;
+        stroke-width: 3.8;
+    }
+    .circle {
+        fill: none;
+        stroke-width: 3.8;
+        stroke-linecap: round;
+        animation: progress 1s ease-out forwards;
+    }
+    .percentage {
+        fill: #0f172a;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.55em;
+        text-anchor: middle;
+        font-weight: 700;
+    }
+    .score-high { stroke: #10b981; }
+    .score-med { stroke: #f59e0b; }
+    .score-low { stroke: #ef4444; }
+    
+    .glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 16px;
+    }
+    .skill-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: transform 0.15s;
+    }
+    .skill-chip:hover {
+        transform: translateY(-1px);
+    }
+    .skill-chip-matched {
+        background-color: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+    .skill-chip-missing {
+        background-color: #fff1f2;
+        color: #9f1239;
+        border: 1px solid #fecdd3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Header -->
+<div class="py-4 text-white" style="background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <span class="badge bg-primary px-3 py-1 rounded-pill fw-semibold text-uppercase mb-2 shadow-sm">
+                    <i class="bi bi-cpu-fill me-1"></i> Core ATS Intelligence Engine
+                </span>
+                <h1 class="h2 fw-bold text-white mb-2">⚡ Automated ATS Resume Scanner</h1>
+                <p class="text-light opacity-75 mb-0 small">
+                    Test how applicant tracking systems evaluate candidate resumes against job specifications. Get instant scores, matched keywords, and gap recommendations.
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                <a href="{% url 'jobs:home' %}" class="btn btn-outline-light btn-sm fw-semibold">
+                    <i class="bi bi-search me-1"></i> Browse Jobs & Apply
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-4">
+    <div class="row g-4">
+        <!-- Left Column: Input Form -->
+        <div class="col-lg-6">
+            <div class="glass-card p-4 shadow-sm h-100">
+                <h5 class="fw-bold mb-3 text-dark d-flex align-items-center">
+                    <i class="bi bi-file-earmark-arrow-up-fill text-primary me-2 fs-4"></i>
+                    Upload or Paste Resume
+                </h5>
+
+                <form method="POST" action="{% url 'jobs:ats_scanner' %}" enctype="multipart/form-data" id="atsForm">
+                    {% csrf_token %}
+
+                    <!-- Target Job Selection -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">1. Select Target Job Position</label>
+                        <select name="job_id" id="jobSelect" class="form-select shadow-sm" onchange="toggleCustomFields(this.value)">
+                            <option value="">-- Choose from Active Tenant Postings --</option>
+                            {% for j in jobs %}
+                            <option value="{{ j.pk }}" {% if selected_job_id == j.pk|stringformat:"i" %}selected{% endif %}
+                                    data-title="{{ j.title }}" data-skills="{{ j.required_skills }}" data-desc="{{ j.description }}">
+                                {{ j.title }} &bull; {{ j.company.name }}
+                            </option>
+                            {% endfor %}
+                            <option value="custom" {% if selected_job_id == 'custom' %}selected{% endif %}>+ Custom Role (Enter Your Own Specs)</option>
+                        </select>
+                    </div>
+
+                    <!-- Custom Job Specs (Hidden by default unless selected) -->
+                    <div id="customJobBox" class="p-3 bg-light rounded-3 mb-3 border d-none">
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Custom Job Title</label>
+                            <input type="text" name="custom_title" class="form-control form-control-sm" placeholder="e.g. Full Stack Python Developer">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Required Skills (Comma separated)</label>
+                            <input type="text" name="custom_skills" class="form-control form-control-sm" placeholder="e.g. Python, Django, MySQL, React, Git">
+                        </div>
+                    </div>
+
+                    <!-- File Upload Input -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">2. Upload Resume File (PDF, DOCX, TXT)</label>
+                        <input type="file" name="resume_file" id="resumeFile" class="form-control shadow-sm" accept=".pdf,.docx,.txt">
+                        <div class="form-text small">Our engine parses PDF text layers, Word XML, and plain text formats.</div>
+                    </div>
+
+                    <div class="text-center text-muted small my-2 fw-semibold">&mdash; OR PASTE RESUME CONTENT &mdash;</div>
+
+                    <!-- Text Area Input -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Paste Resume Plain Text</label>
+                        <textarea name="resume_text" id="resumeText" class="form-control shadow-sm" rows="6" placeholder="Paste candidate work experience, skills, education, and project details here...">{{ resume_text }}</textarea>
+                    </div>
+
+                    <!-- 1-Click Demo Preload Buttons -->
+                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <span class="small fw-bold text-muted d-block mb-2">
+                            <i class="bi bi-lightning-charge-fill text-warning me-1"></i>1-Click Quick Demo Resumes (Try Instantly):
+                        </span>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm py-1" onclick="loadSample('python')">
+                                <i class="bi bi-file-code me-1"></i>Python / Django Dev
+                            </button>
+                            <button type="button" class="btn btn-outline-success btn-sm py-1" onclick="loadSample('qa')">
+                                <i class="bi bi-bug me-1"></i>QA Tester
+                            </button>
+                            <button type="button" class="btn btn-outline-purple btn-sm py-1 text-purple" style="border: 1px solid #c084fc; color: #7e22ce;" onclick="loadSample('data')">
+                                <i class="bi bi-bar-chart me-1"></i>Data Analyst / ML
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow">
+                        <i class="bi bi-cpu-fill me-1"></i> Run ATS Match Evaluation &rarr;
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Results / Report -->
+        <div class="col-lg-6">
+            {% if ats_result %}
+            <!-- Visual Report Card -->
+            <div class="glass-card p-4 shadow-sm border-2 {% if ats_result.score >= 75 %}border-success{% elif ats_result.score >= 50 %}border-warning{% else %}border-danger{% endif %}">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <div>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 rounded small">Evaluation Completed</span>
+                        <h5 class="fw-bold mb-0 mt-1 text-dark">ATS Match Report</h5>
+                    </div>
+                    <div class="small text-muted text-end">
+                        Target: <strong class="text-dark">{{ ats_result.target_title }}</strong>
+                    </div>
+                </div>
+
+                <!-- Radial Circular Gauge -->
+                <div class="row align-items-center mb-4">
+                    <div class="col-sm-5 text-center">
+                        <svg viewBox="0 0 36 36" class="circular-chart">
+                            <path class="circle-bg"
+                                  d="M18 2.0845
+                                     a 15.9155 15.9155 0 0 1 0 31.831
+                                     a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <path class="circle {% if ats_result.score >= 75 %}score-high{% elif ats_result.score >= 50 %}score-med{% else %}score-low{% endif %}"
+                                  stroke-dasharray="{{ ats_result.score }}, 100"
+                                  d="M18 2.0845
+                                     a 15.9155 15.9155 0 0 1 0 31.831
+                                     a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <text x="18" y="20.35" class="percentage">{{ ats_result.score }}%</text>
+                        </svg>
+                        <span class="badge {% if ats_result.score >= 75 %}bg-success{% elif ats_result.score >= 50 %}bg-warning text-dark{% else %}bg-danger{% endif %} px-3 py-1">
+                            {% if ats_result.score >= 75 %}High Match - Shortlist Ready{% elif ats_result.score >= 50 %}Good Match - Moderate Gaps{% else %}Low Match - Needs Tailoring{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="col-sm-7 mt-3 mt-sm-0">
+                        <div class="small text-muted mb-1 fw-semibold">Scoring Composition Breakdown:</div>
+                        
+                        <!-- Metric 1 -->
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between small">
+                                <span>Skill Keyword Overlap</span>
+                                <span class="fw-bold">50% Weight</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-primary" style="width: {% if ats_result.score >= 75 %}90%{% elif ats_result.score >= 50 %}60%{% else %}30%{% endif %};"></div>
+                            </div>
+                        </div>
+
+                        <!-- Metric 2 -->
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between small">
+                                <span>Description Semantic Relevance</span>
+                                <span class="fw-bold">30% Weight</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-info" style="width: {% if ats_result.score >= 75 %}85%{% elif ats_result.score >= 50 %}55%{% else %}25%{% endif %};"></div>
+                            </div>
+                        </div>
+
+                        <!-- Metric 3 -->
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between small">
+                                <span>Education & Project Tokens</span>
+                                <span class="fw-bold">20% Weight</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-success" style="width: 80%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Matched Skills Section -->
+                <div class="mb-3">
+                    <h6 class="fw-bold text-success d-flex align-items-center mb-2">
+                        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                        Matched Skills in Candidate Resume ({{ ats_result.matched_skills_list|length }}):
+                    </h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for sk in ats_result.matched_skills_list %}
+                        <span class="skill-chip skill-chip-matched">
+                            <i class="bi bi-check2"></i> {{ sk }}
+                        </span>
+                        {% empty %}
+                        <span class="text-muted small">No exact required skills identified in text.</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Missing Skills Section -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger d-flex align-items-center mb-2">
+                        <i class="bi bi-exclamation-octagon-fill me-2 fs-5"></i>
+                        Identified Skill Gaps to Add ({{ ats_result.missing_skills_list|length }}):
+                    </h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for sk in ats_result.missing_skills_list %}
+                        <span class="skill-chip skill-chip-missing">
+                            <i class="bi bi-plus-lg"></i> {{ sk }}
+                        </span>
+                        {% empty %}
+                        <span class="text-success small fw-semibold"><i class="bi bi-stars me-1"></i>100% of required skills present in resume!</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Actionable Feedback -->
+                <div class="p-3 bg-light rounded-3 border">
+                    <h6 class="fw-bold text-dark mb-1">
+                        <i class="bi bi-robot text-primary me-2"></i>ATS Recommendation & Optimization Advice
+                    </h6>
+                    <p class="small text-muted mb-0 lh-base">
+                        {{ ats_result.feedback }}
+                    </p>
+                </div>
+
+                <!-- Call to Action -->
+                <div class="mt-4 pt-3 border-top text-center">
+                    <a href="{% url 'jobs:home' %}" class="btn btn-outline-primary btn-sm fw-semibold">
+                        <i class="bi bi-send-check me-1"></i> Apply to Active Jobs with this Resume
+                    </a>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- Placeholder Showcase Card before running evaluation -->
+            <div class="glass-card p-5 text-center shadow-sm h-100 d-flex flex-column justify-content-center">
+                <div class="mb-3">
+                    <div class="rounded-circle bg-primary-subtle d-inline-flex p-4 text-primary">
+                        <i class="bi bi-cpu fs-1"></i>
+                    </div>
+                </div>
+                <h4 class="fw-bold">Ready to Scan Your Resume</h4>
+                <p class="text-muted small max-w-sm mx-auto mb-4">
+                    Upload a resume on the left or click one of our 1-click sample templates to view the ATS scoring engine in action!
+                </p>
+
+                <!-- Sample Preview Chips -->
+                <div class="p-3 bg-light rounded-3 border text-start">
+                    <span class="small fw-semibold text-dark d-block mb-2">What our ATS Engine Evaluates:</span>
+                    <ul class="small text-muted mb-0 ps-3 space-y-1">
+                        <li><strong>Hard Skills Overlap:</strong> Evaluates languages, frameworks, and databases against job specifications.</li>
+                        <li><strong>Semantic TF-IDF Relevance:</strong> Compares domain terminology from description to resume text.</li>
+                        <li><strong>Education & Degree Verification:</strong> Scans for B.Tech, BE, MCA, or relevant university credentials.</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleCustomFields(val) {
+    const box = document.getElementById('customJobBox');
+    if (val === 'custom') {
+        box.classList.remove('d-none');
+    } else {
+        box.classList.add('d-none');
+    }
+}
+
+function loadSample(type) {
+    let text = "";
+    if (type === 'python') {
+        document.getElementById('jobSelect').value = "1"; // Select first job
+        toggleCustomFields("1");
+        text = `Rahul Verma - Software Engineer
+Email: rahul.verma@example.com | Phone: +91 98765 43210 | Bangalore, India
+
+Education:
+B.Tech in Computer Science and Engineering (2022 - 2026)
+
+Technical Skills:
+Programming Languages: Python, C++, SQL, JavaScript, HTML, CSS
+Frameworks & Databases: Django, REST API, MySQL, SQLite, Bootstrap
+Tools & DevOps: Git, GitHub, Docker, Postman, Linux
+
+Projects:
+1. Multi-Tenant Job Portal (Django & MySQL):
+   Built role-based multi-tenant job board with automated ATS resume parser.
+2. REST API Backend Microservice:
+   Engineered high-performance RESTful APIs with database migrations and unit tests.
+
+Experience:
+Software Developer Intern - Web Development
+Worked in Agile sprints, integrated third-party REST endpoints, and optimized MySQL queries.`;
+    } else if (type === 'qa') {
+        document.getElementById('jobSelect').value = "4"; // QA job
+        toggleCustomFields("4");
+        text = `Priya Nair - QA Automation Specialist
+Email: priya.nair@example.com | Phone: +91 91234 56789 | Hyderabad, India
+
+Education:
+Bachelor of Engineering (BE) in Information Technology
+
+Technical Skills:
+Testing: Selenium WebDriver, Unit Testing, TestNG, Bug Tracking
+Languages: Python, Java, SQL
+Tools: Git, Postman, Jenkins, JIRA, Agile, Scrum
+
+Experience:
+QA Engineer Intern
+Created automated regression test suites using Selenium with Python and verified REST API responses.`;
+    } else if (type === 'data') {
+        document.getElementById('jobSelect').value = "5"; // ML Intern
+        toggleCustomFields("5");
+        text = `Ananya Deshmukh - Data Science & ML Enthusiast
+Email: ananya.ml@example.com | Phone: +91 99887 76655 | Pune, India
+
+Education:
+B.Tech in Computer Science & Artificial Intelligence
+
+Skills:
+Python, Machine Learning, Pandas, NumPy, Data Analysis, SQL, Scikit-learn, Statistics
+
+Projects:
+1. Healthcare Diagnostic Predictor:
+   Trained classification algorithms to analyze patient records with 91% accuracy.
+2. Exploratory Data Analysis Dashboard:
+   Automated predictive reporting pipelines using Python and SQL.`;
+    }
+
+    document.getElementById('resumeText').value = text;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'students/base.html' %}
+{% block content %}
+<h1>Useful things,<br>ready to go.</h1>
+<p class="intro">Browse the current shelf and claim what you need. Stock updates immediately after every purchase.</p>
+{% if products %}
+<section class="products">
+    {% for product in products %}
+    <article class="product">
+        <div>
+            <h2>{{ product.product_name }}</h2>
+            <div class="meta">No. {{ product.product_no }} &middot; {{ product.qty }} available</div>
+        </div>
+        <div>
+            <div class="price">${{ product.price }}</div>
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'students:buy_product' product.id %}">{% csrf_token %}<button type="submit">Buy one</button></form>
+            {% else %}<a class="button" href="{% url 'login' %}?next={{ request.path|urlencode }}">Log in to buy</a>{% endif %}
+        </div>
+    </article>
+    {% endfor %}
+</section>
+{% else %}<p class="intro">There are no products in stock right now.</p>{% endif %}
+{% endblock %}

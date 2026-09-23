@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ company.name }} - Open Roles & Profile | TalentSphere{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Company Profile Header -->
+    <div class="card p-4 p-md-5 mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white;">
+        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-4">
+            <div class="rounded-4 d-flex align-items-center justify-content-center text-white fw-bold shadow-lg"
+                 style="width: 80px; height: 80px; background-color: {{ company.logo_color }}; font-size: 2rem;">
+                {{ company.name|slice:":1" }}
+            </div>
+            <div class="flex-grow-1">
+                <span class="badge bg-primary px-3 py-1 rounded-pill mb-2">Verified Tenant Organization</span>
+                <h1 class="h2 fw-bold mb-2">{{ company.name }}</h1>
+                <div class="d-flex flex-wrap gap-3 text-light opacity-75 small">
+                    <span><i class="bi bi-geo-alt me-1 text-danger"></i>{{ company.location }}</span>
+                    <span>&bull;</span>
+                    <span><i class="bi bi-briefcase me-1 text-info"></i>{{ company.industry }}</span>
+                    {% if company.website %}
+                    <span>&bull;</span>
+                    <a href="{{ company.website }}" target="_blank" class="text-light text-decoration-none">
+                        <i class="bi bi-globe me-1"></i>Website <i class="bi bi-box-arrow-up-right small"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div>
+                <span class="badge bg-light text-dark px-3 py-2 fs-6 fw-bold">
+                    {{ jobs.count }} Active Opening{{ jobs.count|pluralize }}
+                </span>
+            </div>
+        </div>
+        {% if company.description %}
+        <div class="mt-4 pt-3 border-top border-secondary border-opacity-50 text-light opacity-90">
+            {{ company.description }}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Active Openings by this Tenant -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold mb-0">Open Positions at {{ company.name }}</h4>
+        <a href="{% url 'jobs:home' %}" class="small text-decoration-none">View all platform jobs &rarr;</a>
+    </div>
+
+    <div class="row g-3">
+        {% for job in jobs %}
+        <div class="col-md-6">
+            <div class="card p-3 p-md-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="fw-bold mb-1">
+                            <a href="{% url 'jobs:job_detail' job.pk %}" class="text-dark text-decoration-none hover-primary">
+                                {{ job.title }}
+                            </a>
+                        </h5>
+                        <span class="badge bg-light text-dark border">{{ job.get_job_type_display }}</span>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 text-muted small mb-3">
+                        <span><i class="bi bi-geo-alt me-1"></i>{{ job.location }}</span>
+                        <span>&bull;</span>
+                        <span><i class="bi bi-laptop me-1"></i>{{ job.get_work_mode_display }}</span>
+                        {% if job.salary_range %}
+                        <span>&bull;</span>
+                        <span class="text-success fw-semibold">{{ job.salary_range }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-1 mb-3">
+                        {% for skill in job.skills_list|slice:":4" %}
+                        <span class="badge-skill">{{ skill }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="pt-2 border-top d-flex justify-content-between align-items-center">
+                    <span class="small text-muted">Posted {{ job.created_at|timesince }} ago</span>
+                    <a href="{% url 'jobs:job_detail' job.pk %}" class="btn btn-sm btn-primary fw-semibold">
+                        Apply Now &rarr;
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card p-4 text-center text-muted">
+                No active openings currently available for this company.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign Up as Job Seeker | TalentSphere{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card p-4 shadow-sm border-0">
+                <div class="text-center mb-4">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill mb-2">
+                        Candidate Registration
+                    </span>
+                    <h3 class="fw-bold">Create Job Seeker Account</h3>
+                    <p class="text-muted small">Build your profile, search multi-tenant openings, and get instant ATS resume scores.</p>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger small p-2">
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        {% endfor %}
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">First Name</label>
+                            {{ form.first_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Last Name</label>
+                            {{ form.last_name }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Username *</label>
+                            {{ form.username }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Email Address *</label>
+                            {{ form.email }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Password *</label>
+                            {{ form.password }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Confirm Password *</label>
+                            {{ form.confirm_password }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Professional Headline</label>
+                            {{ form.headline }}
+                            <div class="form-text small">e.g. <code>Python Developer | CSE Student | React & MySQL Enthusiast</code></div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Primary Skills</label>
+                            {{ form.skills }}
+                            <div class="form-text small">Comma-separated skills (e.g. <code>Python, Django, SQL, Git</code>)</div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Phone Number</label>
+                            {{ form.phone }}
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold mt-4 shadow-sm">
+                        Create Account & Start Applying &rarr;
+                    </button>
+                </form>
+
+                <div class="text-center mt-4 small text-muted">
+                    Are you an Employer or HR? 
+                    <a href="{% url 'jobs:register_employer' %}" class="fw-semibold text-decoration-none ms-1">
+                        Register Company &rarr;
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
