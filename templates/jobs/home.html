@@ -7,17 +7,17 @@
 <section class="hero-gradient text-white py-5 mb-4">
     <div class="container py-3">
         <div class="row align-items-center">
-            <div class="col-lg-8 mx-auto text-center">
+            <div class="col-lg-7">
                 <span class="badge bg-primary px-3 py-2 rounded-pill text-uppercase fw-semibold mb-3">
-                    <i class="bi bi-stars me-1"></i> Powered by Automated ATS Resume Match
+                    <i class="bi bi-stars me-1"></i> The intelligent way to move next
                 </span>
-                <h1 class="display-5 fw-bold mb-3">Discover Opportunities Across Leading Tech Companies</h1>
+                <h1 class="display-4 fw-bold mb-3 text-white">Your next chapter starts with the right signal.</h1>
                 <p class="lead text-light opacity-75 mb-3">
-                    Explore multi-tenant hiring openings, apply with your resume, and get instant real-time ATS match insights!
+                    Find ambitious roles, understand your fit before you apply, and move through hiring with clarity.
                 </p>
 
                 <!-- Quick Action Buttons -->
-                <div class="d-flex flex-wrap justify-content-center gap-2 mb-4">
+                <div class="d-flex flex-wrap gap-2 mb-4">
                     <a href="{% url 'jobs:ats_scanner' %}" class="btn btn-warning text-dark fw-bold px-4 py-2 shadow-sm rounded-pill">
                         <i class="bi bi-lightning-charge-fill me-1"></i> Scan Resume with ATS Scorer &rarr;
                     </a>
@@ -57,6 +57,20 @@
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+            <div class="col-lg-4 offset-lg-1 d-none d-lg-block">
+                <div class="p-4 border border-light border-opacity-25 rounded-3" style="background: rgba(255,255,255,.07); backdrop-filter: blur(8px);">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="small text-uppercase opacity-75">Platform pulse</span>
+                        <span class="badge rounded-pill bg-success">Live</span>
+                    </div>
+                    <div class="display-4 fw-bold text-white">{{ stats.total_jobs }}</div>
+                    <p class="text-light opacity-75 mb-4">active opportunities across the network</p>
+                    <div class="d-flex justify-content-between border-top border-light border-opacity-25 pt-3">
+                        <span class="small text-light opacity-75"><i class="bi bi-buildings me-1"></i> {{ stats.total_companies }} companies</span>
+                        <span class="small text-light opacity-75"><i class="bi bi-graph-up-arrow me-1"></i> ATS ready</span>
+                    </div>
                 </div>
             </div>
         </div>

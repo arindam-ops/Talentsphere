@@ -37,7 +37,7 @@ A production-grade **multi-tenant job portal** built with **Django 6.0**, featur
 
 ```bash
 # Clone the repo
-git clone https://github.com/<your-username>/TalentSphere.git
+git clone https://github.com/arindam-ops/TalentSphere.git
 cd TalentSphere
 
 # Create virtual environment

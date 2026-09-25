@@ -11,52 +11,81 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --secondary: #0f172a;
-            --bg-light: #f8fafc;
-            --card-border: #e2e8f0;
+            --primary: #b6f23b;
+            --primary-dark: #91c91d;
+            --ink: #10221e;
+            --ink-soft: #2e4941;
+            --paper: #f4f5ef;
+            --card: #ffffff;
+            --card-border: #dbe4dc;
+            --muted: #6b7d75;
+            --coral: #f4775c;
         }
+        * { box-sizing: border-box; }
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-light);
-            color: #334155;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--paper);
+            color: var(--ink-soft);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
+        h1, h2, h3, h4, h5, h6, .navbar-brand { font-family: 'Space Grotesk', sans-serif; color: var(--ink); }
+        .site-nav { background: var(--ink) !important; border-bottom: 1px solid rgba(182, 242, 59, 0.18); }
+        .site-nav .nav-link { color: rgba(255,255,255,.68) !important; font-size: .86rem; transition: color .2s ease; }
+        .site-nav .nav-link:hover, .site-nav .nav-link.active { color: var(--primary) !important; }
+        .site-nav .navbar-toggler { border-color: rgba(255,255,255,.25); }
         .navbar-brand {
             font-weight: 700;
-            letter-spacing: -0.5px;
+            letter-spacing: -0.8px;
         }
         .brand-gradient {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            color: var(--primary);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-image: linear-gradient(135deg, #b6f23b, #e2ff9c);
         }
         .hero-gradient {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(118deg, #10221e 0%, #18332c 58%, #23483a 100%);
         }
+        .hero-gradient::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            opacity: .18;
+            background-image: linear-gradient(rgba(182,242,59,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(182,242,59,.22) 1px, transparent 1px);
+            background-size: 48px 48px;
+            mask-image: linear-gradient(90deg, black, transparent 74%);
+        }
+        .hero-gradient > .container { position: relative; z-index: 1; }
+        .hero-gradient h1, .hero-gradient h2, .hero-gradient h3 { color: #ffffff; }
         .btn-primary {
             background-color: var(--primary);
             border-color: var(--primary);
+            color: var(--ink);
+            font-weight: 700;
         }
         .btn-primary:hover {
             background-color: var(--primary-dark);
             border-color: var(--primary-dark);
+            color: var(--ink);
         }
         .card {
             border: 1px solid var(--card-border);
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            transition: all 0.2s ease-in-out;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(16, 34, 30, .045);
+            transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
         }
         .card:hover {
-            box-shadow: 0 8px 20px rgba(0,0,0,0.07);
+            box-shadow: 0 14px 30px rgba(16, 34, 30, .09);
+            border-color: #bfd0c3;
+            transform: translateY(-2px);
         }
         .badge-ats {
             font-size: 0.85rem;
@@ -65,32 +94,44 @@
             border-radius: 30px;
         }
         .badge-skill {
-            background-color: #e0e7ff;
-            color: #3730a3;
+            background-color: #edf5df;
+            color: #42601e;
             font-size: 0.75rem;
             padding: 0.3rem 0.6rem;
             border-radius: 6px;
             font-weight: 500;
         }
         .badge-tenant {
-            background-color: #ecfdf5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
+            background-color: #e9f4ed;
+            color: #286249;
+            border: 1px solid #c6e1ce;
             border-radius: 6px;
             font-size: 0.75rem;
             padding: 0.2rem 0.5rem;
         }
         .tenant-banner {
-            background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
+            background: var(--primary);
+            color: var(--ink);
             padding: 0.35rem 1rem;
             font-size: 0.85rem;
             font-weight: 500;
         }
         footer {
             margin-top: auto;
-            background-color: #0f172a;
+            background-color: var(--ink);
             color: #94a3b8;
+        }
+        .text-primary { color: #5a8618 !important; }
+        .text-success { color: #23805b !important; }
+        .bg-primary { background-color: var(--primary) !important; color: var(--ink) !important; }
+        .bg-dark { background-color: var(--ink) !important; }
+        .form-control, .form-select { border-color: var(--card-border); border-radius: 6px; }
+        .form-control:focus, .form-select:focus { border-color: #9fca4a; box-shadow: 0 0 0 .2rem rgba(182,242,59,.22); }
+        .hover-primary:hover { color: #5a8618 !important; }
+        @media (max-width: 767.98px) {
+            .hero-gradient { padding-top: 2rem !important; }
+            .hero-gradient h1 { font-size: 2.25rem; letter-spacing: -1px; }
+            .site-nav .navbar-brand .badge { display: none !important; }
         }
     </style>
     {% block extra_head %}{% endblock %}
@@ -117,7 +158,7 @@
     {% endif %}
 
     <!-- Top Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-3 sticky-top shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-dark site-nav py-3 sticky-top shadow-sm">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="{% url 'jobs:home' %}">
                 <i class="bi bi-cpu-fill text-primary fs-3 me-2"></i>
